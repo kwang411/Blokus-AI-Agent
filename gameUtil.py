@@ -21,13 +21,19 @@ class Board:
         #out = [[str(self.data[y][x])[0] for y in range(self.height)] for x in range(self.width)]
         #out.reverse()
         out = []
+        out.append([str(i%10) for i in range(self.height)])
         for r in range(self.height):
             x = []
             for c in range(self.width):
                 if(self.data[r][c] == 0):
                     x.append('.')
+                elif(self.data[r][c] == 1):
+                    x.append('O')
+                elif(self.data[r][c] == 2):
+                    x.append('X')
                 else:
                     x.append(str(self.data[r][c]))
+            x.append(' ' + str(r))
             out.append(x)
         out.reverse()
         return '\n'.join([''.join(z) for z in out])
@@ -60,7 +66,7 @@ class Board:
         for r in range(1,tile.tileHeight+1):
             for c in range(1,tile.tileWidth+1):
                 if(tile[(r,c)] == 'P'):
-                    nextBoard[x+c-1][y+r-1] = tile.player
+                    nextBoard[y+r-1][x+c-1] = tile.player
         return nextBoard
 
     #add a tile to the Board (assumes that tile can be placed)
@@ -78,7 +84,7 @@ class Board:
         for r in range(1,tile.tileHeight+1):
             for c in range(1,tile.tileWidth+1):
                 if(tile[(r,c)] == 'P'):
-                    self[(x+c-1,y+r-1)] = tile.player
+                    self[(y+r-1,x+c-1)] = tile.player
         self.numPiecesPlayed += 1
         if(p):
             print(self)
@@ -100,16 +106,16 @@ class Board:
         if(not isFirstTurn):
             for r in range(tileHeight+2):
                 for c in range(tileWidth+2):
-                    if(tile[(r,c)] == 'P' and self.get(x+c-1,y+r-1,data) != 0):
+                    if(tile[(r,c)] == 'P' and self.get(y+r-1,x+c-1,data) != 0):
                         return False
-                    elif(tile[(r,c)] == 'N' and self.get(x+c-1,y+r-1,data) == tile.player):
+                    elif(tile[(r,c)] == 'N' and self.get(y+r-1,x+c-1,data) == tile.player):
                         return False
-                    elif(tile[(r,c)] == 'C' and self.get(x+c-1,y+r-1,data) == tile.player):
+                    elif(tile[(r,c)] == 'C' and self.get(y+r-1,x+c-1,data) == tile.player):
                         numCorners+=1
         else:
             for r in range(1,tileHeight+1):
                 for c in range(1,tileWidth+1):
-                    if(tile[(r,c)] == 'P' and self.get(x+c-1,y+r-1,data) == 3):
+                    if(tile[(r,c)] == 'P' and self.get(y+r-1,x+c-1,data) == 3):
                         numCorners+=1
         return (numCorners > 0)
 
@@ -209,7 +215,7 @@ i3 = ['CNC','NPN','NPN','NPN','CNC']
 o3 = Tile(1,3,i3,1,1,3)
 b3 = Tile(1,3,i3,1,2,3)
 
-crooked3 = ['CNC.','NPNC','NPPN','CNNC']
+crooked3 = ['CNNC','NPPN','NPNC','CNC.']
 o4 = Tile(2,2,crooked3,2,1,3)
 b4 = Tile(2,2,crooked3,2,2,3)
 
@@ -221,7 +227,7 @@ shortL = ['.CNC','.NPN','CNPN','NPPN','CNNC']
 o6 = Tile(2,3,shortL,3,1,4)
 b6 = Tile(2,3,shortL,3,2,4)
 
-shortT = ['CNC.','NPNC','NPPN','NPNC','CNCP']
+shortT = ['CNC.','NPNC','NPPN','NPNC','CNC.']
 o7 = Tile(2,3,shortT,2,1,4)
 b7 = Tile(2,3,shortT,2,2,4)
 
@@ -261,11 +267,11 @@ t = ['CNC..','NPNNC','NPPPN','NPNNC','CNC..']
 o16 = Tile(3,3,t,2,1,5)
 b16 = Tile(3,3,t,2,2,5)
 
-v = ['CNC..','NPN..','NPNNC','NPPPN','CNNNC']
+v = ['CNNNC','NPPPN','NPNNC','NPN..','CNC..']
 o17 = Tile(3,3,v,2,1,5)
 b17 = Tile(3,3,v,2,2,5)
 
-w = ['CNNC.','NPPNC','CNPPN','.CNPN','..CNC']
+w = ['..CNC','.CNPN','CNPPN','NPPNC','CNNC.']
 o18 = Tile(3,3,w,2,1,5)
 b18 = Tile(3,3,w,2,2,5)
 

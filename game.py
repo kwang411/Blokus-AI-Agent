@@ -125,6 +125,6 @@ class PlayGame:
 #simulates 2 games
 #currently aggressively unoptimized, so takes a few seconds to play out a whole game
 p = PlayGame()
-#p.simulateGame()
-#p.clearGame()
-#p.simulateGame()
+p.simulateGame()
+p.clearGame()
+p.simulateGame()
