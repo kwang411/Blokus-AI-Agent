@@ -2,18 +2,25 @@ from copy import deepcopy
 
 class Board:
     #class to hold game board and pieces
+    #helper functions should be used in gameState only; anything using game state shouldn't need to use these
     # a 0 represents an empty square
     # 1 represents a square belonging to player 1, and 2 a square belonging to player 2
     # 3 for special start position
     
-    def __init__(self):
+    def __init__(self, prevBoard = None):
         self.width = 14
         self.height = 14
+        
+        #import data from previous state
+        if (prevBoard != None):
+            self.data = deepcopy(prevBoard.data)
+            self.numPiecesPlayed = prevBoard.numPiecesPlayed
         #initialize 14x14 grid of points
-        self.data =[[0 for y in range(self.height)] for x in range(self.width)]
-        self.data[4][4] = 3
-        self.data[9][9] = 3
-        self.numPiecesPlayed = 0
+        else:
+            self.data =[[0 for y in range(self.height)] for x in range(self.width)]
+            self.data[4][4] = 3
+            self.data[9][9] = 3
+            self.numPiecesPlayed = 0
 
     #str method basically copied from game.py in pacman assignment
     def __str__(self):
@@ -43,13 +50,13 @@ class Board:
     def __getitem__(self,key):
         x,y = key
         if(x<0 or x>=self.width or y<0 or y>= self.height):
-            return -1
+            return -10
         else:
             return self.data[x][y]
 
     def get(self,x,y,data):
         if(x<0 or x>=self.width or y<0 or y>= self.height):
-            return -1
+            return -10
         else:
             return data[x][y]
     
@@ -58,24 +65,14 @@ class Board:
         x,y = key
         self.data[x][y] = item
 
-    #like placeTile but returns a new board instead of updating the original board
-    #assumes that tile placement is valid
-    def getNextBoard(self, data, tile, x, y, rot = 0, ref = 0, player = 1):
-        nextBoard = deepcopy(data)
-        tile.transform(rot,ref)
-        for r in range(1,tile.tileHeight+1):
-            for c in range(1,tile.tileWidth+1):
-                if(tile[(r,c)] == 'P'):
-                    nextBoard[y+r-1][x+c-1] = player
-        return nextBoard
-
     #add a tile to the Board (assumes that tile can be placed)
     #tile: a Tile object representing tile to be places
     #x,y: position on the board to place
     #rot: 90 degree multiple for rotation, ref: wheteher to reflect
-    #safe: if true, make sure tile placement is legal first
-    #p: if true, print grid after placement
-    def placeTile(self, tile, x, y, rot = 0, ref = 0, player = 1, safe = False, p = False):
+    #safe: if true, make sure tile placement is legal first (for human use)
+    #toPrint: if true, print grid after placement
+    def placeTile(self, tileId, x, y, rot = 0, ref = 0, player = 1, safe = False, toPrint = False):
+        tile = tiles[tileId]
         if(safe):
             if (not self.canPlaceTile(tile,x,y,rot,ref)):
                 return False
@@ -86,16 +83,16 @@ class Board:
                 if(tile[(r,c)] == 'P'):
                     self[(y+r-1,x+c-1)] = player
         self.numPiecesPlayed += 1
-        if(p):
+        if(toPrint):
             print(self)
         return True
 
 
     #check whether a specific tile can be placed in the grid at this position
     #(x,y) are the coordinates of the bottom-left bounding box of the piece
-    def canPlaceTile(self, tile, x, y, rot = 0, ref = 0, player = 1, data = False, isFirstTurn = False):
-        if (data == False):
-            data = self.data
+    def canPlaceTile(self, tileId, x, y, rot = 0, ref = 0, player = 1, isFirstTurn = False):
+        tile = tiles[tileId]
+        data = self.data
         if (not tile.transform(rot,ref)):
             return False
         tileWidth = tile.tileWidth
@@ -199,9 +196,8 @@ class Tile:
 
 
 
-#polyomino data (each data array is official piece name; o and b stand for orange and blue
-board = Board()
-#Tile(width,height,name,symmetry,player)
+#polyomino data (each data array is official piece name) 
+#Tile(width,height,name,symmetryLevel)
 i1 = [['C','N','C'],['N','P','N'],['C','N','C']]
 o1 = Tile(1,1,i1,0,1)
 
@@ -269,4 +265,3 @@ o21 = Tile(3,3,x,0,5)
 tiles = [o1,o2,o3,o4,o5,o6,o7,o8,o9,o10,o11,o12,o13,o14,o15,o16,o17,o18,o19,o20,o21]
 
 
-print(board)
