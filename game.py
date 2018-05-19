@@ -1,8 +1,9 @@
 from copy import copy
-from random import choice
 from gameUtil import Board
 from gameUtil import tiles
 import gameUtil
+from agents import BaselineAgent
+from agents import EvaluationAgent
 
 
 #GameState class stores the current state of a game.
@@ -16,13 +17,11 @@ class GameState:
             self.hand1 = [True for i in range(21)]
             self.hand2 = [True for i in range(21)]
             self.playerTurn = 1
-            self.isFirstTurn = True
             self.board = Board()
         else: 
             self.hand1 = copy(prevState.hand1)
             self.hand2 = copy(prevState.hand2)
             self.playerTurn = prevState.playerTurn
-            self.isFirstTurn = prevState.isFirstTurn
             self.board = Board(prevState.board)
 
     def getHand1(self) :
@@ -34,8 +33,6 @@ class GameState:
     def getPlayerTurn(self):
         return self.getPlayerTurn
 
-    def isFirstTurn(self):
-        return self.isFirstTurn
  
     #actions consist of (tileID, x_pos, y_pos, rotation_index, reflection_index)
     def getActions(self, opp = False):
@@ -50,7 +47,7 @@ class GameState:
                     for y in range(self.board.height):
                         for rotationIndex in range(4):
                             for reflectionIndex in range(2):
-                                if (self.board.canPlaceTile(tileId, x, y, rotationIndex, reflectionIndex, self.playerTurn, self.isFirstTurn)):
+                                if (self.board.canPlaceTile(tileId, x, y, rotationIndex, reflectionIndex, self.playerTurn)):
                                     actions.append( (tileId, x, y, rotationIndex, reflectionIndex) )
         return actions
 
@@ -59,8 +56,6 @@ class GameState:
         #copy current state
         state = GameState(self)
 
-        if (state.isFirstTurn and (state.playerTurn==-1)):
-            state.isFirstTurn = False
         #pass: update turn only
         if (action == 'pass' or action == None):
             state.playerTurn = -state.playerTurn
@@ -102,41 +97,31 @@ class GameState:
         print(self.board)
 
 
-class Game:
-    def __init__(self):
-        self.board = gameUtil.Board()
-        self.tiles = gameUtil.tiles
+    ## accessors for evaluation functions ##
+    def getPlayerOneCorners(self):
+        return self.board.corners1
 
+    def getPlayerTwoCorners(self):
+        return self.board.corners2
 
-
-
-
-
-class BaselineAgent:
-    def __init__(self):
-        pass
-
-    def getAction(self, gameState):
-        actions = gameState.getActions()
-        if (actions == []):
-            return 'pass'
-        
-        #choose random move of moves worth the most squares
-        for i in range(5,0,-1):
-            parityMoves = [action for action in actions if tiles[action[0]].squares == i]
-            if(len(parityMoves) > 0):
-                return choice(parityMoves)
-        
-        #this shouldn't ever get here, but just in case pass
-        return 'pass'
 
 
 
 #class to run simulations of blockus games, either agent against self or player against agent
 class Game:
-    def __init__(self):
+    def __init__(self, a1 = 0, a2 = 0):
         self.gameState = GameState()
-        self.agent = BaselineAgent()
+
+        #choose agents based on initialization parameters (defaults to basicAgent)
+        if (a1 == 0):
+            self.agent1 = BaselineAgent()
+        else:
+            self.agent1 = EvaluationAgent(1)
+        
+        if (a2 == 0):
+            self.agent2 = BaselineAgent()
+        else:
+            self.agent2 = EvaluationAgent(-1)
 
     #print out the current board state
     def p(self):
@@ -157,10 +142,11 @@ class Game:
 
     #checks if a given board placement is legal in current board state
     #we cheat a bit here by directly accessing board for player because it's faster than comparing to all actions
-    def checkPlace(self, tileId, x, y, rot = 0, ref = 0):
-        return gameState.board.canPlaceTile(tileId, x, y, rot, ref, self.gameState.getPlayerTurn(), self.gameState.isFirstTurn())
+    def checkPlace(self, tileId, x, y, rot = 0, ref = 0, player = 1):
+        return self.gameState.board.canPlaceTile(tileId, x, y, rot, ref, player)
 
     #plays out a turn of player and opponent
+    #human player is always player 1
     def play(self, tileId, x, y, rot = 0, ref = 0):
         if(self.checkPlace(tileId,x,y,rot,ref) and self.gameState.getHand1()[tileId]):
             self.next(False, (tileId, x, y, rot, ref))
@@ -178,14 +164,20 @@ class Game:
     ##end player access functions##
 
     #function to directly simulate a turn either of a player or an agent
-    def next(self, toPrint = False, action = False):
+    def next(self, toPrint = False, action = False, turn = -1):
+        #if an action is supplied by player, use it. Otherwise, set action based on agent
         if (action == False):
-            action = self.agent.getAction(self.gameState)
+            if (turn == 1):
+                action = self.agent1.getAction(self.gameState)
+            else:
+                action = self.agent2.getAction(self.gameState)
+
         
         self.gameState = self.gameState.generateSuccessor(action)
         
         if(self.gameState.isEnd()):
-            print("game over. Player 2's net score: " + str(self.gameState.getUtility()))
+            score = self.gameState.getUtility()
+            print("game over. Player 2's net score: " + str(score))
             print("player 1's tiles remaining: ", [tileId for (tileId, inHand) in enumerate(self.gameState.getHand1()) if inHand])
             print("player 2's tiles remaining: ", [tileId for (tileId, inHand) in enumerate(self.gameState.getHand2()) if inHand])
             self.p()
@@ -196,20 +188,34 @@ class Game:
 
     #function to play agent against self
     def simulateGame(self):
-        while(self.next(False)):
+        while(self.next(False, False, 1) and self.next(False, False, -1)):
             pass
-        self.newGame()
+        utility = self.gameState.getUtility()
+        self.newGame(False)
+        return utility
 
     #start a new game by resetting all data
-    def newGame(self):
+    def newGame(self, toPrint = True):
         self.gameState = GameState()
         print('')
-        self.p()
+        if toPrint:
+            self.p()
 
 
 #currently we're aggressively unoptimized, so takes a few seconds to play out a whole game
-p = Game()
-p.simulateGame()
+p = Game(1,0)
+numGames = 10
+netScore1 = 0
+for i in range (numGames):
+    netScore1 += p.simulateGame()
+
+p = Game(0,1)
+netScore2 = 0
+for i in range (numGames):
+    netScore2 += p.simulateGame()
+print('average score of simpleeval vs baseline going first: ' + str(netScore1*1.0/numGames))
+print('average score of simpleeval vs baseline going second: ' + str(netScore2*1.0/numGames))
+
 
 print('The Game object is game.p. To simulate a game against the AI, call p.simulateGame()')
 print('To see how to play a game against the AI, call p.help()')

@@ -1,12 +1,25 @@
 from copy import deepcopy
 
+
+
 class Board:
     #class to hold game board and pieces
     #helper functions should be used in gameState only; anything using game state shouldn't need to use these
+    # each square in the grid is represented by a set of bit flags
     # a 0 represents an empty square
     # 1 represents a square belonging to player 1, and 2 a square belonging to player 2
     # 3 for special start position
+
     
+    PLAYABLE_2, CORNER_2, PLAYED_2, PLAYABLE_1, CORNER_1, PLAYED_1 = (1 << 5, 1 << 4, 1 << 3, 1 << 2, 1 << 1, 1)
+    EMPTY = PLAYABLE_2 + PLAYABLE_1
+
+
+    #initialize data or import from a previous board
+    # data: 2D grid representing the board with tile encoding above
+    #numPiecesPlayed: how many pieces have been played
+    #corners1: number of playable corners for player 1
+    #corners2: number of playable corners for player 2
     def __init__(self, prevBoard = None):
         self.width = 14
         self.height = 14
@@ -15,12 +28,17 @@ class Board:
         if (prevBoard != None):
             self.data = deepcopy(prevBoard.data)
             self.numPiecesPlayed = prevBoard.numPiecesPlayed
+            self.corners1 = prevBoard.corners1
+            self.corners2 = prevBoard.corners2
         #initialize 14x14 grid of points
         else:
-            self.data =[[0 for y in range(self.height)] for x in range(self.width)]
-            self.data[4][4] = 3
-            self.data[9][9] = 3
+            self.data =[[(self.EMPTY) for y in range(self.height)] for x in range(self.width)]
+            #make the start state playable by adding a phantom corner piece
+            self.data[4][4] += (self.CORNER_2 + self.CORNER_1)
+            self.data[9][9] += (self.CORNER_2 + self.CORNER_1)
             self.numPiecesPlayed = 0
+            self.corners1 = 2
+            self.corners2 = 2
 
     #str method basically copied from game.py in pacman assignment
     def __str__(self):
@@ -32,40 +50,33 @@ class Board:
         for r in range(self.height):
             x = []
             for c in range(self.width):
-                if(self.data[r][c] == 0):
-                    x.append('.')
-                elif(self.data[r][c] == 1):
+                if(self.data[r][c] == self.PLAYED_1):
                     x.append('O')
-                elif(self.data[r][c] == -1):
+                elif(self.data[r][c] == self.PLAYED_2):
                     x.append('X')
                 else:
-                    x.append(str(self.data[r][c]))
+                    x.append('.')
             x.append(' ' + str(r))
             out.append(x)
         out.reverse()
         return '\n'.join([''.join(z) for z in out])
         #return '\n'.join([' '.join(x) for x in out])
 
-    #method for accessing data where key is (x,y) tuble
+    #method for accessing data where key is (x,y) tuple
     def __getitem__(self,key):
         x,y = key
         if(x<0 or x>=self.width or y<0 or y>= self.height):
-            return -10
+            #out of bounds: all flags set to false == 0
+            return 0
         else:
             return self.data[x][y]
-
-    def get(self,x,y,data):
-        if(x<0 or x>=self.width or y<0 or y>= self.height):
-            return -10
-        else:
-            return data[x][y]
     
     #set data using (x,y) tuple (for consistency with Tile)
     def __setitem__(self,key,item):
         x,y = key
         self.data[x][y] = item
 
-    #add a tile to the Board (assumes that tile can be placed)
+    #add a tile to the Board (assumes that tile can be placed), updating necessary data
     #tile: a Tile object representing tile to be places
     #x,y: position on the board to place
     #rot: 90 degree multiple for rotation, ref: wheteher to reflect
@@ -74,14 +85,67 @@ class Board:
     def placeTile(self, tileId, x, y, rot = 0, ref = 0, player = 1, safe = False, toPrint = False):
         tile = tiles[tileId]
         if(safe):
-            if (not self.canPlaceTile(tile,x,y,rot,ref)):
+            if (not self.canPlaceTile(tile,x,y,rot,ref, player)):
                 return False
         else:
             tile.transform(rot,ref)
-        for r in range(1,tile.tileHeight+1):
-            for c in range(1,tile.tileWidth+1):
-                if(tile[(r,c)] == 'P'):
-                    self[(y+r-1,x+c-1)] = player
+
+        #player 1 placement
+        if player == 1:
+            for r in range(0,tile.tileHeight+2):
+                for c in range(0,tile.tileWidth+2):
+                    data = self[(y+r-1,x+c-1)] 
+                    if(tile[(r,c)] == 'P'):
+                        #remove corners from count
+                        if (data & self.CORNER_1) != 0:
+                            self.corners1 -= 1
+                        if (data & self.CORNER_2) != 0:
+                            self.corners2 -= 1
+                        #clear all flags except played for this player
+                        self[(y+r-1,x+c-1)] = self.PLAYED_1
+                    elif(tile[(r,c)] == 'C'):
+                        #add corner to the board if the square isn't already blocked or a corner
+                        if ((data & self.PLAYABLE_1) != 0) and ((data & self.CORNER_1) == 0):
+                            self.corners1 += 1
+                            #set corner flag
+                            self[(y+r-1,x+c-1)] |= self.CORNER_1
+                    elif(tile[(r,c)] == 'N'):
+                        #make this tile unplayable for this player only, if it wasn't already
+                        if ((data & self.PLAYABLE_1) != 0):
+                            if ((data & self.CORNER_1) != 0):
+                                self.corners1 -= 1
+                                #clear corner flag
+                                self[(y+r-1,x+c-1)] &= (~self.CORNER_1)
+                            #clear playable flag
+                            self[(y+r-1,x+c-1)] &=  (~self.PLAYABLE_1)
+        #same thing but for player 2
+        else:
+            for r in range(0,tile.tileHeight+2):
+                for c in range(0,tile.tileWidth+2):
+                    data = self[(y+r-1,x+c-1)] 
+                    if(tile[(r,c)] == 'P'):
+                        #remove corners from count
+                        if (data & self.CORNER_1) != 0:
+                            self.corners1 -= 1
+                        if (data & self.CORNER_2) != 0:
+                            self.corners2 -= 1
+                        #clear all flags except played for this player
+                        self[(y+r-1,x+c-1)] = self.PLAYED_2
+                    elif(tile[(r,c)] == 'C'):
+                        #add corner to the board if the square isn't already blocked or a corner
+                        if ((data & self.PLAYABLE_2) != 0) and ((data & self.CORNER_2) == 0):
+                            self.corners2 += 1
+                            #set corner flag
+                            self[(y+r-1,x+c-1)] |= self.CORNER_2
+                    elif(tile[(r,c)] == 'N'):
+                        #make this tile unplayable for this player only, if it wasn't already
+                        if ((data & self.PLAYABLE_2) != 0):
+                            if ((data & self.CORNER_2) != 0):
+                                self.corners2 -= 1
+                                #clear corner flag
+                                self[(y+r-1,x+c-1)] &= (~self.CORNER_2)
+                            #clear playable flag
+                            self[(y+r-1,x+c-1)] &=  (~self.PLAYABLE_2)
         self.numPiecesPlayed += 1
         if(toPrint):
             print(self)
@@ -90,30 +154,36 @@ class Board:
 
     #check whether a specific tile can be placed in the grid at this position
     #(x,y) are the coordinates of the bottom-left bounding box of the piece
-    def canPlaceTile(self, tileId, x, y, rot = 0, ref = 0, player = 1, isFirstTurn = False):
+    def canPlaceTile(self, tileId, x, y, rot = 0, ref = 0, player = 1):
         tile = tiles[tileId]
-        data = self.data
         if (not tile.transform(rot,ref)):
             return False
         tileWidth = tile.tileWidth
         tileHeight = tile.tileHeight
+        #make sure we're not placing anything out of bounds
         if((tileWidth+x > self.width) or (tileHeight+y > self.height)):
             return False
         numCorners = 0
-        if(not isFirstTurn):
-            for r in range(tileHeight+2):
-                for c in range(tileWidth+2):
-                    if(tile[(r,c)] == 'P' and self.get(y+r-1,x+c-1,data) != 0):
-                        return False
-                    elif(tile[(r,c)] == 'N' and self.get(y+r-1,x+c-1,data) == player):
-                        return False
-                    elif(tile[(r,c)] == 'C' and self.get(y+r-1,x+c-1,data) == player):
-                        numCorners+=1
+        #check that every square is going on a playable location, and on at least one corner
+        if(player == 1):
+            for r in range(1,tileHeight+1):
+                for c in range(1,tileWidth+1):
+                    if(tile[(r,c)] == 'P'):
+                        data = self[(y+r-1,x+c-1)]
+                        if (data & self.PLAYABLE_1) == 0:
+                            return False
+                        elif (data & self.CORNER_1) != 0:
+                            numCorners+= 1
+        #do the same but for player 2
         else:
             for r in range(1,tileHeight+1):
                 for c in range(1,tileWidth+1):
-                    if(tile[(r,c)] == 'P' and self.get(y+r-1,x+c-1,data) == 3):
-                        numCorners+=1
+                    if(tile[(r,c)] == 'P'):
+                        data = self[(y+r-1,x+c-1)]
+                        if (data & self.PLAYABLE_2) == 0:
+                            return False
+                        elif (data & self.CORNER_2) != 0:
+                            numCorners+= 1
         return (numCorners > 0)
 
 
