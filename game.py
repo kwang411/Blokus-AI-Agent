@@ -47,8 +47,8 @@ class GameState:
             if (inHand):
                 for x in range(self.board.width):
                     for y in range(self.board.height):
-                        #simple heuristic to test whether this tile is within five squares of a corner
-                        if (self.board.nearCorner(x,y, self.playerTurn)):
+                        #simple heuristic to test whether this tile is roughly close enough to a corner
+                        if (self.board.nearCorner(x,y, tileId, self.playerTurn)):
                             for rotationIndex in range(4):
                                 for reflectionIndex in range(2):
                                     if (self.board.canPlaceTile(tileId, x, y, rotationIndex, reflectionIndex, self.playerTurn)):
@@ -192,7 +192,7 @@ class Game:
         
         if(self.gameState.isEnd()):
             score = self.gameState.getUtility()
-            print("game over. Score: " + str(score))
+            print("game over. Score (for player 1): " + str(score))
             print("player 1's tiles remaining: ", [tileId for (tileId, inHand) in enumerate(self.gameState.getHand1()) if inHand])
             print("player 2's tiles remaining: ", [tileId for (tileId, inHand) in enumerate(self.gameState.getHand2()) if inHand])
             self.p()
@@ -227,9 +227,10 @@ for i in range (numGames):
 p = Game(0,1)
 netScore2 = 0
 for i in range (numGames):
-    netScore2 += p.simulateGame()
-print('average score of simpleeval vs baseline going first: ' + str(netScore1*1.0/numGames))
-print('average score of simpleeval vs baseline going second: ' + str(netScore2*1.0/numGames))
+    #subtract because we want player 2's score
+    netScore2 -= p.simulateGame()
+print('average score of simpleeval, going first vs baseline over '+str(numGames)+' games: ' + str(netScore1*1.0/numGames))
+print('average score of simpleeval, going second vs baseline over '+str(numGames)+' games: ' + str(netScore2*1.0/numGames))
 
 
 print('The Game object is game.p. To simulate a game against the AI, call p.simulateGame()')

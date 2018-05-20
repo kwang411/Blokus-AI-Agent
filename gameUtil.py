@@ -198,14 +198,20 @@ class Board:
                             numCorners+= 1
         return (numCorners > 0)
 
-    def nearCorner(self,x,y,player):
+
+    #function to determine whether a particular tile at a particular location is roughly close enough to a courner
+    #note that the tile coordinates are always lower-left, so we only need to check up and right
+    def nearCorner(self,x,y,tileId,player):
+        width = tiles[tileId].tileWidth
+        height = tiles[tileId].tileHeight
         if (player == 1):
             corners = self.corners1
         else:
             corners = self.corners2
         for (cx,cy) in corners:
-            if (abs(cx-x)+abs(cy-y)) <= 5:
-                return True
+            if (cx >= x and cy >= y):
+                if (cx-x < width and cy-y < height) or (cx-x < height and cy-y < width):
+                    return True
         return False
 
 
