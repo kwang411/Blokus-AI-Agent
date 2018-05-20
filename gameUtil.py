@@ -18,8 +18,8 @@ class Board:
     #initialize data or import from a previous board
     # data: 2D grid representing the board with tile encoding above
     #numPiecesPlayed: how many pieces have been played
-    #corners1: number of playable corners for player 1
-    #corners2: number of playable corners for player 2
+    #corners1: playable corners for player 1
+    #corners2: playable corners for player 2
     def __init__(self, prevBoard = None):
         self.width = 14
         self.height = 14
@@ -28,8 +28,10 @@ class Board:
         if (prevBoard != None):
             self.data = deepcopy(prevBoard.data)
             self.numPiecesPlayed = prevBoard.numPiecesPlayed
-            self.corners1 = prevBoard.corners1
-            self.corners2 = prevBoard.corners2
+            self.corners1 = prevBoard.corners1[:]
+            self.corners2 = prevBoard.corners2[:]
+            self.numCorners1 = prevBoard.numCorners1
+            self.numCorners2 = prevBoard.numCorners2
         #initialize 14x14 grid of points
         else:
             self.data =[[(self.EMPTY) for y in range(self.height)] for x in range(self.width)]
@@ -37,8 +39,10 @@ class Board:
             self.data[4][4] += (self.CORNER_2 + self.CORNER_1)
             self.data[9][9] += (self.CORNER_2 + self.CORNER_1)
             self.numPiecesPlayed = 0
-            self.corners1 = 2
-            self.corners2 = 2
+            self.corners1 = [(4,4),(9,9)]
+            self.corners2 = [(4,4),(9,9)]
+            self.numCorners1 = 2
+            self.numCorners2 = 2
 
     #str method basically copied from game.py in pacman assignment
     def __str__(self):
@@ -98,27 +102,31 @@ class Board:
                     if(tile[(r,c)] == 'P'):
                         #remove corners from count
                         if (data & self.CORNER_1) != 0:
-                            self.corners1 -= 1
+                            self.corners1.remove((x+c-1,y+r-1))
+                            self.numCorners1 -= 1
                         if (data & self.CORNER_2) != 0:
-                            self.corners2 -= 1
+                            self.corners2.remove((x+c-1,y+r-1))
+                            self.numCorners2 -= 1
                         #clear all flags except played for this player
                         self[(y+r-1,x+c-1)] = self.PLAYED_1
                     elif(tile[(r,c)] == 'C'):
                         #add corner to the board if the square isn't already blocked or a corner
                         if ((data & self.PLAYABLE_1) != 0) and ((data & self.CORNER_1) == 0):
-                            self.corners1 += 1
+                            self.corners1.append((x+c-1,y+r-1))
+                            self.numCorners1 += 1
                             #set corner flag
                             self[(y+r-1,x+c-1)] |= self.CORNER_1
                     elif(tile[(r,c)] == 'N'):
                         #make this tile unplayable for this player only, if it wasn't already
                         if ((data & self.PLAYABLE_1) != 0):
                             if ((data & self.CORNER_1) != 0):
-                                self.corners1 -= 1
+                                self.corners1.remove((x+c-1,y+r-1))
+                                self.numCorners1 -= 1
                                 #clear corner flag
                                 self[(y+r-1,x+c-1)] &= (~self.CORNER_1)
                             #clear playable flag
                             self[(y+r-1,x+c-1)] &=  (~self.PLAYABLE_1)
-        #same thing but for player 2
+        #same thing but for player 2. I could probably collapse these but whatever
         else:
             for r in range(0,tile.tileHeight+2):
                 for c in range(0,tile.tileWidth+2):
@@ -126,22 +134,26 @@ class Board:
                     if(tile[(r,c)] == 'P'):
                         #remove corners from count
                         if (data & self.CORNER_1) != 0:
-                            self.corners1 -= 1
+                            self.corners1.remove((x+c-1,y+r-1))
+                            self.numCorners1 -= 1
                         if (data & self.CORNER_2) != 0:
-                            self.corners2 -= 1
+                            self.corners2.remove((x+c-1,y+r-1))
+                            self.numCorners2 -= 1
                         #clear all flags except played for this player
                         self[(y+r-1,x+c-1)] = self.PLAYED_2
                     elif(tile[(r,c)] == 'C'):
                         #add corner to the board if the square isn't already blocked or a corner
                         if ((data & self.PLAYABLE_2) != 0) and ((data & self.CORNER_2) == 0):
-                            self.corners2 += 1
+                            self.corners2.append((x+c-1,y+r-1))
+                            self.numCorners2 += 1
                             #set corner flag
                             self[(y+r-1,x+c-1)] |= self.CORNER_2
                     elif(tile[(r,c)] == 'N'):
                         #make this tile unplayable for this player only, if it wasn't already
                         if ((data & self.PLAYABLE_2) != 0):
                             if ((data & self.CORNER_2) != 0):
-                                self.corners2 -= 1
+                                self.corners2.remove((x+c-1,y+r-1))
+                                self.numCorners2 -= 1
                                 #clear corner flag
                                 self[(y+r-1,x+c-1)] &= (~self.CORNER_2)
                             #clear playable flag
@@ -185,6 +197,16 @@ class Board:
                         elif (data & self.CORNER_2) != 0:
                             numCorners+= 1
         return (numCorners > 0)
+
+    def nearCorner(self,x,y,player):
+        if (player == 1):
+            corners = self.corners1
+        else:
+            corners = self.corners2
+        for (cx,cy) in corners:
+            if (abs(cx-x)+abs(cy-y)) <= 5:
+                return True
+        return False
 
 
 

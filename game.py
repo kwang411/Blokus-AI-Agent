@@ -17,12 +17,15 @@ class GameState:
             self.hand2 = [True for i in range(21)]
             self.playerTurn = 1
             self.board = Board()
+            self.previousPlayerPassed = False
+            self.endState = False
         else: 
             self.hand1 = copy(prevState.hand1)
             self.hand2 = copy(prevState.hand2)
             self.playerTurn = prevState.playerTurn
             self.board = Board(prevState.board)
-
+            self.previousPlayerPassed = prevState.previousPlayerPassed
+            self.endState = prevState.endState
     def getHand1(self) :
         return self.hand1
     
@@ -44,10 +47,12 @@ class GameState:
             if (inHand):
                 for x in range(self.board.width):
                     for y in range(self.board.height):
-                        for rotationIndex in range(4):
-                            for reflectionIndex in range(2):
-                                if (self.board.canPlaceTile(tileId, x, y, rotationIndex, reflectionIndex, self.playerTurn)):
-                                    actions.append( (tileId, x, y, rotationIndex, reflectionIndex) )
+                        #simple heuristic to test whether this tile is within five squares of a corner
+                        if (self.board.nearCorner(x,y, self.playerTurn)):
+                            for rotationIndex in range(4):
+                                for reflectionIndex in range(2):
+                                    if (self.board.canPlaceTile(tileId, x, y, rotationIndex, reflectionIndex, self.playerTurn)):
+                                        actions.append( (tileId, x, y, rotationIndex, reflectionIndex) )
         return actions
 
     #returns the state that follows the given action
@@ -58,8 +63,12 @@ class GameState:
         #pass: update turn only
         if (action == 'pass' or action == None):
             state.playerTurn = -state.playerTurn
+            if (self.previousPlayerPassed):
+                state.endState = True
+            else:
+                state.previousPlayerPassed = True
             return state
-
+        
         tileId, x, y, rotationIndex, reflectionIndex = action
         
         #player plays tile: update turn, player's hand, board
@@ -68,12 +77,13 @@ class GameState:
         else:
             state.hand2[tileId] = False
         state.board.placeTile(tileId, x, y, rotationIndex, reflectionIndex, state.playerTurn)
+        state.previousPlayerPassed = False
         state.playerTurn = -state.playerTurn
         return state
 
-    #return whether we have an end state (neither player has any actions)
+    #return whether we have an end state (both players just passed)
     def isEnd(self):
-        return ( (self.getActions() == []) and (self.getActions(True)  == []) )
+        return self.endState
 
     #returns score differential of end state based on blockus rules
     #5 extra points for ending on single square not yet implemented (will have to change state)
@@ -98,16 +108,16 @@ class GameState:
 
     ## accessors for evaluation functions ##
     def getPlayerOneCorners(self):
-        return self.board.corners1
+        return self.board.numCorners1
 
     def getPlayerTwoCorners(self):
-        return self.board.corners2
+        return self.board.numCorners2
 
     def getPlayerCorners(self, player):
         if player == 1:
-            return self.board.corners1
+            return self.board.numCorners1
         else:
-            return self.board.corners2
+            return self.board.numCorners2
 
 
 
