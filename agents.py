@@ -42,25 +42,48 @@ class BaselineAgent (Agent):
 
 class EvaluationAgent (Agent):
 
-    def __init__(self, player=-1):
+    def __init__(self, player=-1, depth=5):
         self.player = player
+        self.depth = depth
 
-    #basic evaluation function scoring on number of 'playable' corners and square score
-    def evaluate(self, gameState, action):
-        squareScore = tiles[action[0]].squares 
-        successor = gameState.generateSuccessor(action)
-        cornerScore =  successor.getPlayerOneCorners() - successor.getPlayerTwoCorners()
-        if (self.player == 1):
-            return squareScore+cornerScore
-        return squareScore-cornerScore
-        
+
+    #basic evaluation function scoring on number of 'playable' corners
+    def evaluate(self, gameState):
+        result = 0
+        result += (gameState.getPlayerCorners(self.player) - gameState.getPlayerCorners(-self.player))
+        return result
+    
+    #depth limited search
     def getAction(self, gameState):
+        def valueSearch(gameState, depth, turn, alpha, beta):
+            if gameState.isEnd():
+                return gameState.getUtility()
+            if depth == 0:
+                return self.evaluate(gameState)
+            if turn == 0:
+                current = float("-inf")
+                for action in gameState.getActions():
+                    current = max(current, valueSearch(gameState.generateSuccessor(action), depth, 1, alpha, beta))
+                    alpha = max(alpha, current)
+                    if beta <= alpha:
+                        break
+                return current
+            else: 
+                current = float("inf")
+                for action in gameState.getActions():
+                    current = min(current, valueSearch(gameState.generateSuccessor(action), depth - 1, 0, alpha, beta))
+                    beta = min(beta, current)
+                    if beta <= alpha:
+                        break
+                return current
+
         actions = gameState.getActions()
         if (actions == []):
             return 'pass'
-      
-        #choose move from moves with the best evaluation score
-        scores = [(self.evaluate(gameState,action),action) for action in actions]
-        maxScore = max(scores)[0]
-                
-        return choice([action for (score,action) in scores if score == maxScore])
+
+        scores = [valueSearch(gameState.generateSuccessor(action), self.depth, 1, float("-inf"), float("inf")) for action in actions]
+        bestScore = max(scores)
+        bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
+        chosenIndex = choice(bestIndices)
+        return actions[chosenIndex]
+

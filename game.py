@@ -5,11 +5,10 @@ import gameUtil
 from agents import BaselineAgent
 from agents import EvaluationAgent
 
-#test commit
 #GameState class stores the current state of a game.
 #includes getActions, generateSuccessor, and accessors for all stored data
 #any agent accessing state data should only need to use these helper functions, 
-#   not directly access the data or use board sub-functions
+#not directly access the data or use board sub-functions
 class GameState:
     def __init__(self, prevState = None):
         #if no previous, initialize to start state, otherwise full copy
@@ -91,7 +90,7 @@ class GameState:
             score1 += 15
         if(score2 == 0):
             score2 += 15
-        return score2-score1
+        return score1-score2
 
     def p(self):
         print(self.board)
@@ -103,6 +102,12 @@ class GameState:
 
     def getPlayerTwoCorners(self):
         return self.board.corners2
+
+    def getPlayerCorners(self, player):
+        if player == 1:
+            return self.board.corners1
+        else:
+            return self.board.corners2
 
 
 
@@ -177,7 +182,7 @@ class Game:
         
         if(self.gameState.isEnd()):
             score = self.gameState.getUtility()
-            print("game over. Player 2's net score: " + str(score))
+            print("game over. Score: " + str(score))
             print("player 1's tiles remaining: ", [tileId for (tileId, inHand) in enumerate(self.gameState.getHand1()) if inHand])
             print("player 2's tiles remaining: ", [tileId for (tileId, inHand) in enumerate(self.gameState.getHand2()) if inHand])
             self.p()
