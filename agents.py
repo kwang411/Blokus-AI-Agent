@@ -51,10 +51,13 @@ class EvaluationAgent (Agent):
 
     #basic evaluation function scoring on number of 'playable' corners
     def evaluate(self, gameState):
-        scoreScore = gameState.getUtility()* self.player
-        cornerScore = gameState.getPlayerCorners(self.player) - gameState.getPlayerCorners(-self.player)
-        spanScore = len(gameState.getStateSpan()) - len(gameState.getStateSpan(True))
-        return scoreScore + cornerScore + spanScore
+        weights = [1,1,-1,1,-1]
+        scoreScore = weights[0] * gameState.getUtility()* self.player
+        cornerScore1 = weights[1] * gameState.getPlayerCorners(self.player) 
+        cornerScore2 = weights[2] * gameState.getPlayerCorners(-self.player)
+        spanScore1 = weights[3] * len(gameState.getStateSpan()) 
+        spanScore2 = weights[4] * len(gameState.getStateSpan(True))
+        return scoreScore + cornerScore1 + cornerScore2 + spanScore1 + spanScore2
     
     #depth limited search
     def getAction(self, gameState):
