@@ -32,8 +32,14 @@ class GameState:
     def getHand2(self):
         return self.hand2
 
+    #returns which player's turn it is
     def getPlayerTurn(self):
         return self.getPlayerTurn
+
+    #returns which turn in the game it is
+    #not really accurate because doesn't account for passing but close enough for our purposes
+    def getTurn(self):
+        return 22-len([True for inHand in self.hand2 if inHand])
 
  
     #actions consist of (tileID, x_pos, y_pos, rotation_index, reflection_index)
@@ -216,22 +222,3 @@ class Game:
         if toPrint:
             self.p()
 
-
-#currently we're aggressively unoptimized, so takes a few seconds to play out a whole game
-p = Game(1,0)
-numGames = 10
-netScore1 = 0
-for i in range (numGames):
-    netScore1 += p.simulateGame()
-
-p = Game(0,1)
-netScore2 = 0
-for i in range (numGames):
-    #subtract because we want player 2's score
-    netScore2 -= p.simulateGame()
-print('average score of simpleeval, going first vs baseline over '+str(numGames)+' games: ' + str(netScore1*1.0/numGames))
-print('average score of simpleeval, going second vs baseline over '+str(numGames)+' games: ' + str(netScore2*1.0/numGames))
-
-
-print('The Game object is game.p. To simulate a game against the AI, call p.simulateGame()')
-print('To see how to play a game against the AI, call p.help()')
