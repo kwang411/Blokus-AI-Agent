@@ -199,6 +199,18 @@ class Board:
         return (numCorners > 0)
 
 
+    def getTileSpan(self, tileId, x, y, rot = 0, ref = 0):
+        span = set([])
+        tile = tiles[tileId]
+        tileWidth = tile.tileWidth
+        tileHeight = tile.tileHeight
+        #get set of tile indices
+        for r in range(1,tileHeight+1):
+            for c in range(1,tileWidth+1):
+                if(tile[(r,c)] == 'P'):
+                    span.add((y+r-1,x+c-1))
+        return span
+
     #function to determine whether a particular tile at a particular location is roughly close enough to a courner
     #note that the tile coordinates are always lower-left, so we only need to check up and right
     def nearCorner(self,x,y,tileId,player):

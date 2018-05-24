@@ -1,6 +1,8 @@
 from gameUtil import tiles
 from random import choice
 
+import time
+
 '''
 Contains classes representing our various agent implementations.
 '''
@@ -42,16 +44,17 @@ class BaselineAgent (Agent):
 
 class EvaluationAgent (Agent):
 
-    def __init__(self, player=-1, depth=5):
+    def __init__(self, player=-1, depth=1):
         self.player = player
         self.depth = depth
 
 
     #basic evaluation function scoring on number of 'playable' corners
     def evaluate(self, gameState):
-        result = 0
-        result += (gameState.getPlayerCorners(self.player) - gameState.getPlayerCorners(-self.player))
-        return result
+        scoreScore = gameState.getUtility()* self.player
+        cornerScore = gameState.getPlayerCorners(self.player) - gameState.getPlayerCorners(-self.player)
+        spanScore = len(gameState.getStateSpan()) - len(gameState.getStateSpan(True))
+        return scoreScore + cornerScore + spanScore
     
     #depth limited search
     def getAction(self, gameState):
@@ -70,7 +73,7 @@ class EvaluationAgent (Agent):
                 return current
             else: 
                 current = float("inf")
-                for action in gameState.getActions():
+                for action in reversed(gameState.getActions()):
                     current = min(current, valueSearch(gameState.generateSuccessor(action), depth - 1, 0, alpha, beta))
                     beta = min(beta, current)
                     if beta <= alpha:
@@ -80,10 +83,23 @@ class EvaluationAgent (Agent):
         actions = gameState.getActions()
         if (actions == []):
             return 'pass'
-
-        scores = [valueSearch(gameState.generateSuccessor(action), self.depth, 1, float("-inf"), float("inf")) for action in actions]
+        
+        
+        depth = 0
+        if (gameState.getTurn() > 9):
+            depth = 2
+        depth = 0
+        print(len(actions))
+        
+        #time how long it takes to get an action
+        start_time = time.time()
+        
+        scores = [valueSearch(gameState.generateSuccessor(action), depth, 1, float("-inf"), float("inf")) for action in reversed(actions)]
         bestScore = max(scores)
         bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
         chosenIndex = choice(bestIndices)
+
+        #output time
+        print("turn: %s--- %s seconds ---" % (gameState.getTurn(),time.time() - start_time))
         return actions[chosenIndex]
 

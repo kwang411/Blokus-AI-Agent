@@ -125,6 +125,23 @@ class GameState:
         else:
             return self.board.numCorners2
 
+    def getStateSpan(self, opp = False):
+        span = set([])
+        hand = self.hand1
+        #check player 2's actions if it's player 2's turn xor we specified opponent's action
+        if((opp) != (self.playerTurn == -1)):
+            hand = self.hand2
+        for (tileId, inHand) in enumerate(hand):
+            if (inHand):
+                for x in range(self.board.width):
+                    for y in range(self.board.height):
+                        #simple heuristic to test whether this tile is roughly close enough to a corner
+                        if (self.board.nearCorner(x,y, tileId, self.playerTurn)):
+                            for rotationIndex in range(4):
+                                for reflectionIndex in range(2):
+                                    if (self.board.canPlaceTile(tileId, x, y, rotationIndex, reflectionIndex, self.playerTurn)):
+                                        span |= self.board.getTileSpan(tileId, x, y, rotationIndex, reflectionIndex) 
+        return span
 
 
 
