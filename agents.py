@@ -1,8 +1,10 @@
+from __future__ import division
 from gameUtil import tiles
 from random import choice
 
 import time
-
+from math import log, sqrt
+import collections
 '''
 Contains classes representing our various agent implementations.
 '''
@@ -91,7 +93,6 @@ class EvaluationAgent (Agent):
         depth = 0
         if (gameState.getTurn() > 9):
             depth = 2
-        depth = 0
         print(len(actions))
         
         #time how long it takes to get an action
@@ -105,4 +106,75 @@ class EvaluationAgent (Agent):
         #output time
         print("turn: %s--- %s seconds ---" % (gameState.getTurn(),time.time() - start_time))
         return actions[chosenIndex]
+
+
+class MCTSAgent (Agent):
+
+    def __init__(self, player):
+        self.player = player
+        self.C = 1.4
+        self.turn_time = 30
+        self.statistics = {} #collections.defaultdict(lambda: (0, 0)) 
+
+    def simulation(self, gameState):
+        expanded = False
+        visited = set()
+        currentState = gameState
+        if currentState.string() not in self.statistics:
+            self.statistics[currentState.string()] = [0.,0.]
+        visited.add(currentState)
+        turn = 1
+
+        while(True) :
+            actions = currentState.getActions()
+            if (actions == []):
+                currentState = currentState.generateSuccessor('pass')
+            else:
+                nextStates = [currentState.generateSuccessor(action) for action in actions]
+                if(all(state.string() in self.statistics for state in nextStates)):
+                #UCB decision making based on exploration probability; max( ,1) to make sure no divide by 0's or ln(0); sorry for disgusting line
+                    ucb, currentState = max((turn*self.statistics[state.string()][0]/max(self.statistics[state.string()][1], 1) + 
+                        self.C*sqrt(log(max(self.statistics.get(currentState.string(), (0,1))[1],1))/max(self.statistics[state.string()][1],1)), state) for state in nextStates)
+                else:#random playout
+                    currentState = choice(nextStates)
+
+            turn *= -1
+            visited.add(currentState)
+            if not expanded and currentState.string() not in self.statistics:
+                expanded = True
+                self.statistics[currentState.string()] = [0.,0.]
+            if currentState.isEnd():
+                break
+
+        #backpropagate result of playout
+        reward = abs(currentState.getUtility())
+        if currentState.getWinner() != self.player:
+            reward *= -1
+        for state in visited:
+            if state.string() not in self.statistics: #only backpropagate to nodes in statistics
+                continue
+            self.statistics[state.string()][0] += reward # value
+            self.statistics[state.string()][1] += 1 # number of visits
+
+    def getAction(self, gameState):
+        self.statistics.clear()
+        actions = gameState.getActions()
+        if (actions == []):
+            return 'pass'
+
+        # simulate a large number of playouts
+        numberGames = 0
+        start = time.time()
+        while time.time() - start < self.turn_time:
+            self.simulation(gameState)
+            numberGames += 1
+
+        print str(numberGames) + " simulations run for this action"
+        # choose state that has been visited the most times
+        visits = [self.statistics[gameState.generateSuccessor(action).string()][1] for action in actions if gameState.generateSuccessor(action).string() in self.statistics]
+        mostVisits = max(visits)
+        bestIndices = [index for index in range(len(visits)) if visits[index] == mostVisits]
+        chosenIndex = choice(bestIndices)
+        return actions[chosenIndex]
+
 

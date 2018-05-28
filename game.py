@@ -4,6 +4,7 @@ from gameUtil import tiles
 import gameUtil
 from agents import BaselineAgent
 from agents import EvaluationAgent
+from agents import MCTSAgent
 
 #GameState class stores the current state of a game.
 #includes getActions, generateSuccessor, and accessors for all stored data
@@ -34,7 +35,7 @@ class GameState:
 
     #returns which player's turn it is
     def getPlayerTurn(self):
-        return self.getPlayerTurn
+        return self.playerTurn
 
     #returns which turn in the game it is
     #not really accurate because doesn't account for passing but close enough for our purposes
@@ -108,8 +109,18 @@ class GameState:
             score2 += 15
         return score1-score2
 
+    def getWinner(self):
+        if self.isEnd():
+            if self.getUtility() > 0:
+                return 1
+            else:
+                return -1
+
     def p(self):
         print(self.board)
+
+    def string(self):
+        return str(self.board) + str(self.getPlayerTurn()) # essentially a hash so we can use gameStates as keys, takes into account passing
 
 
     ## accessors for evaluation functions ##
@@ -154,12 +165,12 @@ class Game:
         if (a1 == 0):
             self.agent1 = BaselineAgent()
         else:
-            self.agent1 = EvaluationAgent(1)
+            self.agent1 = MCTSAgent(1)
         
         if (a2 == 0):
             self.agent2 = BaselineAgent()
         else:
-            self.agent2 = EvaluationAgent(-1)
+            self.agent2 = MCTSAgent(-1)
 
     #print out the current board state
     def p(self):
