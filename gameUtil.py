@@ -55,9 +55,9 @@ class Board:
             x = []
             for c in range(self.width):
                 if(self.data[r][c] == self.PLAYED_1):
-                    x.append('O')
+                    x.append('\033[94m'+'#'+'\033[0m')
                 elif(self.data[r][c] == self.PLAYED_2):
-                    x.append('X')
+                    x.append('\033[33m'+'@'+'\033[0m')
                 else:
                     x.append('.')
             x.append(' ' + str(r))
