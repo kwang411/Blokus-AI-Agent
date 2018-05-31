@@ -60,7 +60,7 @@ class GameState:
                                 for reflectionIndex in range(2):
                                     if (self.board.canPlaceTile(tileId, x, y, rotationIndex, reflectionIndex, self.playerTurn)):
                                         actions.append( (tileId, x, y, rotationIndex, reflectionIndex) )
-        return actions
+        return actions[::-1]
 
     #returns the state that follows the given action
     def generateSuccessor(self, action):
@@ -164,13 +164,17 @@ class Game:
         #choose agents based on initialization parameters (defaults to basicAgent)
         if (a1 == 0):
             self.agent1 = BaselineAgent()
-        else:
+        elif (a1 == 1):
             self.agent1 = MCTSAgent(1)
+        else:
+            self.agent1 = EvaluationAgent(1)
         
         if (a2 == 0):
             self.agent2 = BaselineAgent()
-        else:
+        elif(a2==1):
             self.agent2 = MCTSAgent(-1)
+        else:
+            self.agent2 = EvaluationAgent(-1)
 
     #print out the current board state
     def p(self):
@@ -236,8 +240,8 @@ class Game:
         return True
 
     #function to play agent against self
-    def simulateGame(self):
-        while(self.next(False, False, 1) and self.next(False, False, -1)):
+    def simulateGame(self, p = False):
+        while(self.next(p, False, 1) and self.next(p, False, -1)):
             pass
         utility = self.gameState.getUtility()
         self.newGame(False)

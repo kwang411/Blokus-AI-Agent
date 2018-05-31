@@ -1,6 +1,6 @@
 from __future__ import division
 from gameUtil import tiles
-from random import choice
+from random import choice,uniform
 
 import time
 from math import log, sqrt
@@ -46,20 +46,20 @@ class BaselineAgent (Agent):
 
 class EvaluationAgent (Agent):
 
-    def __init__(self, player=-1, depth=1):
+    def __init__(self, player=-1, depth=0):
         self.player = player
         self.depth = depth
 
 
     #basic evaluation function scoring on number of 'playable' corners
     def evaluate(self, gameState):
-        weights = [1,1,-1,1,-1]
+        weights = [2,0,-1,0,0]
         scoreScore = weights[0] * gameState.getUtility()* self.player
-        cornerScore1 = weights[1] * gameState.getPlayerCorners(self.player) 
+        #cornerScore1 = weights[1] * gameState.getPlayerCorners(self.player) 
         cornerScore2 = weights[2] * gameState.getPlayerCorners(-self.player)
-        spanScore1 = weights[3] * len(gameState.getStateSpan()) 
-        spanScore2 = weights[4] * len(gameState.getStateSpan(True))
-        return scoreScore + cornerScore1 + cornerScore2 + spanScore1 + spanScore2
+        #spanScore1 = weights[3] * len(gameState.getStateSpan()) 
+        #spanScore2 = weights[4] * len(gameState.getStateSpan(True))
+        return scoreScore + cornerScore2 #+ spanScore1 + spanScore2
     
     #depth limited search
     def getAction(self, gameState):
@@ -89,16 +89,16 @@ class EvaluationAgent (Agent):
         if (actions == []):
             return 'pass'
         
-        
+        '''
         depth = 0
         if (gameState.getTurn() > 9):
             depth = 2
         print(len(actions))
-        
+        '''
         #time how long it takes to get an action
         start_time = time.time()
         
-        scores = [valueSearch(gameState.generateSuccessor(action), depth, 1, float("-inf"), float("inf")) for action in reversed(actions)]
+        scores = [valueSearch(gameState.generateSuccessor(action),self.depth, 1, float("-inf"), float("inf")) for action in actions]
         bestScore = max(scores)
         bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
         chosenIndex = choice(bestIndices)
@@ -130,13 +130,20 @@ class MCTSAgent (Agent):
             if (actions == []):
                 currentState = currentState.generateSuccessor('pass')
             else:
-                nextStates = [currentState.generateSuccessor(action) for action in actions]
+                stateWeights = [(currentState.generateSuccessor(action),tiles[action[0]].squares) for action in actions]
+                nextStates = [sw[0] for sw in stateWeights]
                 if(all(state.string() in self.statistics for state in nextStates)):
                 #UCB decision making based on exploration probability; max( ,1) to make sure no divide by 0's or ln(0); sorry for disgusting line
-                    ucb, currentState = max((turn*self.statistics[state.string()][0]/max(self.statistics[state.string()][1], 1) + 
-                        self.C*sqrt(log(max(self.statistics.get(currentState.string(), (0,1))[1],1))/max(self.statistics[state.string()][1],1)), state) for state in nextStates)
+                    vals = [(turn*self.statistics[state.string()][0]/max(self.statistics[state.string()][1], 1) + 
+                        self.C*sqrt(log(max(self.statistics.get(currentState.string(), (0,1))[1],1))/max(self.statistics[state.string()][1],1)), state) for state in nextStates]
+                    ucb = max([val[0] for val in vals])
+                    bestIndices = [index for (index,val) in enumerate(vals) if val[0] == ucb]
+                    chosenIndex = choice(bestIndices)
+                    currentState = vals[chosenIndex][1]
                 else:#random playout
-                    currentState = choice(nextStates)
+                    #currentState = choice(nextStates)
+                    #random playout weighted by square score
+                    currentState = weightedRandomChoice(stateWeights)
 
             turn *= -1
             visited.add(currentState)
@@ -171,10 +178,30 @@ class MCTSAgent (Agent):
 
         print str(numberGames) + " simulations run for this action"
         # choose state that has been visited the most times
-        visits = [self.statistics[gameState.generateSuccessor(action).string()][1] for action in actions if gameState.generateSuccessor(action).string() in self.statistics]
-        mostVisits = max(visits)
-        bestIndices = [index for index in range(len(visits)) if visits[index] == mostVisits]
+        visits = [(self.statistics[gameState.generateSuccessor(action).string()][1],actionIndex) for (actionIndex, action) in enumerate(actions) if gameState.generateSuccessor(action).string() in self.statistics]
+        
+        #print([(consideredAction,visits[i]) for (i,consideredAction) in enumerate(consideredActions)] )
+        mostVisits = max([visit[0] for visit in visits])
+        bestIndices = [actionIndex for (numVisits, actionIndex) in visits if numVisits == mostVisits]
         chosenIndex = choice(bestIndices)
         return actions[chosenIndex]
 
-
+#modified from HW7-car
+#weighted random choice from list of tuples
+def weightedRandomChoice(weightDict):
+    weights = []
+    elems = []
+    for elem in weightDict:
+        weights.append(elem[1])
+        elems.append(elem[0])
+    total = sum(weights)
+    key = uniform(0, total)
+    runningTotal = 0.0
+    chosenIndex = None
+    for i in range(len(weights)):
+        weight = weights[i]
+        runningTotal += weight
+        if runningTotal > key:
+            chosenIndex = i
+            return elems[chosenIndex]
+    raise Exception('Should not reach here')
