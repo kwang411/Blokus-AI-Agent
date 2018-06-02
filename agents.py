@@ -53,7 +53,7 @@ class EvaluationAgent (Agent):
 
     #basic evaluation function scoring on number of 'playable' corners
     def evaluate(self, gameState):
-        weights = [2,0,-1,0,0]
+        weights = [0.5,0,-1,0,0]
         scoreScore = weights[0] * gameState.getUtility()* self.player
         #cornerScore1 = weights[1] * gameState.getPlayerCorners(self.player) 
         cornerScore2 = weights[2] * gameState.getPlayerCorners(-self.player)

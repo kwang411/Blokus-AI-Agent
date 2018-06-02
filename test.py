@@ -4,13 +4,13 @@ test.py:
 '''
 from game import Game
 
-p = Game(1,0)
-numGames = 10
+p = Game(2,0)
+numGames = 50
 netScore1 = 0
 for i in range (numGames):
     netScore1 += p.simulateGame()
 
-p = Game(0,1)
+p = Game(0,2)
 netScore2 = 0
 for i in range (numGames):
     #subtract because we want player 2's score
