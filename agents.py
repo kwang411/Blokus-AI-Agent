@@ -46,7 +46,7 @@ class BaselineAgent (Agent):
 
 class EvaluationAgent (Agent):
 
-    def __init__(self, player=-1, depth=0):
+    def __init__(self, player=-1, depth=1):
         self.player = player
         self.depth = depth
 
@@ -63,6 +63,7 @@ class EvaluationAgent (Agent):
     
     #depth limited search
     def getAction(self, gameState):
+
         def valueSearch(gameState, depth, turn, alpha, beta):
             if gameState.isEnd():
                 return gameState.getUtility()
@@ -90,6 +91,7 @@ class EvaluationAgent (Agent):
             return 'pass'
         
         '''
+        #initial attempts at later-turn deepening (didn't really work)
         depth = 0
         if (gameState.getTurn() > 9):
             depth = 2
@@ -117,6 +119,16 @@ class MCTSAgent (Agent):
         self.statistics = {} #collections.defaultdict(lambda: (0, 0)) 
 
     def simulation(self, gameState):
+
+        #evaluation function used as heuristic for exploration probabilities
+        def evaluate(gameState,turn):
+            weights = [0.5,-1]
+            scoreScore = gameState.getUtility() * turn
+            cornerScore = gameState.getPlayerCorners(-turn)
+            score = (weights[0]*scoreScore + weights[1]*cornerScore) 
+            return score
+
+        
         expanded = False
         visited = set()
         currentState = gameState
@@ -130,8 +142,8 @@ class MCTSAgent (Agent):
             if (actions == []):
                 currentState = currentState.generateSuccessor('pass')
             else:
-                stateWeights = [(currentState.generateSuccessor(action),tiles[action[0]].squares) for action in actions]
-                nextStates = [sw[0] for sw in stateWeights]
+                nextStates = [currentState.generateSuccessor(action) for action in actions]
+                
                 if(all(state.string() in self.statistics for state in nextStates)):
                 #UCB decision making based on exploration probability; max( ,1) to make sure no divide by 0's or ln(0); sorry for disgusting line
                     vals = [(turn*self.statistics[state.string()][0]/max(self.statistics[state.string()][1], 1) + 
@@ -140,9 +152,10 @@ class MCTSAgent (Agent):
                     bestIndices = [index for (index,val) in enumerate(vals) if val[0] == ucb]
                     chosenIndex = choice(bestIndices)
                     currentState = vals[chosenIndex][1]
-                else:#random playout
+                else:#random playout weighted by evaluation heuristic
                     #currentState = choice(nextStates)
-                    #random playout weighted by square score
+                    currScore = evaluate(currentState,turn*self.player)
+                    stateWeights = [(state, evaluate(state,turn*self.player)-currScore) for state in nextStates]
                     currentState = weightedRandomChoice(stateWeights)
 
             turn *= -1
@@ -188,10 +201,13 @@ class MCTSAgent (Agent):
 
 #modified from HW7-car
 #weighted random choice from list of tuples
-def weightedRandomChoice(weightDict):
+def weightedRandomChoice(weightList):
+   
     weights = []
     elems = []
-    for elem in weightDict:
+    for elem in weightList:
+        if (elem[1] < 0):
+            print("oops!")
         weights.append(elem[1])
         elems.append(elem[0])
     total = sum(weights)

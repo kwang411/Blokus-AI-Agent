@@ -54,6 +54,7 @@ class Board:
         for r in range(self.height):
             x = []
             for c in range(self.width):
+                '''
                 if (self.data[r][c] & self.LAST_PLAYED)!=0:
                     self.data[r][c]-=self.LAST_PLAYED
                     if(self.data[r][c] & self.PLAYED_1)!=0:
@@ -61,12 +62,13 @@ class Board:
                     elif(self.data[r][c] & self.PLAYED_2) != 0:
                         x.append('\033[43m'+'@'+'\033[0m')
                 else:
-                    if(self.data[r][c] & self.PLAYED_1)!=0:
-                        x.append('\033[44m'+' '+'\033[0m')
-                    elif(self.data[r][c] & self.PLAYED_2) != 0:
-                        x.append('\033[43m'+' '+'\033[0m')
-                    else:
-                        x.append('.')
+                '''
+                if(self.data[r][c] & self.PLAYED_1)!=0:
+                    x.append('\033[44m'+' '+'\033[0m')
+                elif(self.data[r][c] & self.PLAYED_2) != 0:
+                    x.append('\033[43m'+' '+'\033[0m')
+                else:
+                    x.append('.')
             x.append(' ' + str(r))
             out.append(x)
         out.reverse()
@@ -115,7 +117,7 @@ class Board:
                             self.corners2.remove((x+c-1,y+r-1))
                             self.numCorners2 -= 1
                         #clear all flags except played for this player
-                        self[(y+r-1,x+c-1)] = self.PLAYED_1 + self.LAST_PLAYED
+                        self[(y+r-1,x+c-1)] = self.PLAYED_1 #+ self.LAST_PLAYED
                     elif(tile[(r,c)] == 'C'):
                         #add corner to the board if the square isn't already blocked or a corner
                         if ((data & self.PLAYABLE_1) != 0) and ((data & self.CORNER_1) == 0):
@@ -147,7 +149,7 @@ class Board:
                             self.corners2.remove((x+c-1,y+r-1))
                             self.numCorners2 -= 1
                         #clear all flags except played for this player
-                        self[(y+r-1,x+c-1)] = self.PLAYED_2 + self.LAST_PLAYED
+                        self[(y+r-1,x+c-1)] = self.PLAYED_2 #+ self.LAST_PLAYED
                     elif(tile[(r,c)] == 'C'):
                         #add corner to the board if the square isn't already blocked or a corner
                         if ((data & self.PLAYABLE_2) != 0) and ((data & self.CORNER_2) == 0):

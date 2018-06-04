@@ -18,15 +18,15 @@ class GameState:
             self.hand2 = [True for i in range(21)]
             self.playerTurn = 1
             self.board = Board()
-            self.previousPlayerPassed = False
-            self.endState = False
+            self.passed1 = False
+            self.passed2 = False
         else: 
             self.hand1 = copy(prevState.hand1)
             self.hand2 = copy(prevState.hand2)
             self.playerTurn = prevState.playerTurn
             self.board = Board(prevState.board)
-            self.previousPlayerPassed = prevState.previousPlayerPassed
-            self.endState = prevState.endState
+            self.passed1 = prevState.passed1
+            self.passed2 = prevState.passed2
     def getHand1(self) :
         return self.hand1
     
@@ -45,6 +45,9 @@ class GameState:
  
     #actions consist of (tileID, x_pos, y_pos, rotation_index, reflection_index)
     def getActions(self, opp = False):
+        #if we passed in the past, we always pass again
+        if ( (self.playerTurn == 1) and self.passed1) or ( (self.playerTurn != 1) and self.passed2):
+            return []
         actions = []
         hand = self.hand1
         #check player 2's actions if it's player 2's turn xor we specified opponent's action
@@ -69,11 +72,11 @@ class GameState:
 
         #pass: update turn only
         if (action == 'pass' or action == None):
-            state.playerTurn = -state.playerTurn
-            if (self.previousPlayerPassed):
-                state.endState = True
+            if (state.playerTurn == 1):
+                state.passed1 = True
             else:
-                state.previousPlayerPassed = True
+                state.passed2 = True
+            state.playerTurn = -state.playerTurn
             return state
         
         tileId, x, y, rotationIndex, reflectionIndex = action
@@ -84,13 +87,12 @@ class GameState:
         else:
             state.hand2[tileId] = False
         state.board.placeTile(tileId, x, y, rotationIndex, reflectionIndex, state.playerTurn)
-        state.previousPlayerPassed = False
         state.playerTurn = -state.playerTurn
         return state
 
     #return whether we have an end state (both players just passed)
     def isEnd(self):
-        return self.endState
+        return self.passed1 and self.passed2
 
     #returns score differential of end state based on blockus rules
     #5 extra points for ending on single square not yet implemented (will have to change state)
