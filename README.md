@@ -1,5 +1,6 @@
 # CS221 Final Project
 Trey Connelly, Kevin Hu, Kenneth Wang
+
 Trey - game infrastructure and environment, Kevin - tuning of evaluation function, Kenneth - agent implementation (minimax and Monte Carlo Tree Search)
 
 gameUtil.py: code controlling gameboard ('Board') and tiles ('Tile'). Should not need to be directly accessed for agent functionality, but may need to be queried for evaluation function. If you need to access something directly, let me know and I'll update the infrastructure to add a helper accessor.
